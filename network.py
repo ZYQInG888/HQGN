@@ -89,11 +89,11 @@ class ResBlock(nn.Module):
 
 
 # --------------------------------------------
-# Attention Feature Fusion Module
+# Local-aligned Calibration Module (LCM)
 # --------------------------------------------
-class ASM(nn.Module):
+class LCM(nn.Module):
     def __init__(self, n_feat, kernel_size=3, bias=False):
-        super(ASM, self).__init__()
+        super(LCM, self).__init__()
         self.conv1 = nn.Conv2d(n_feat, n_feat, kernel_size, padding=1, bias=bias)
         self.conv2 = nn.Conv2d(n_feat, n_feat, kernel_size, padding=1, bias=bias)
         self.conv3 = nn.Conv2d(n_feat, n_feat, kernel_size, padding=1, bias=bias)
@@ -195,9 +195,12 @@ def downsample_avgpool(in_channels=64, out_channels=64, kernel_size=3, stride=1,
     return sequential(pool, pool_tail)
 
 
-class QGM(nn.Module):
+# --------------------------------------------
+# Global-guided Calibration Module (GCM)
+# --------------------------------------------
+class GCM(nn.Module):
     def __init__(self, in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True, mode='CRC', negative_slope=0.2):
-        super(QGM, self).__init__()
+        super(GCM, self).__init__()
 
         assert in_channels == out_channels, 'Only support in_channels==out_channels.'
         if mode[0] in ['R', 'L']:
@@ -252,15 +255,15 @@ class HQGN(nn.Module):
         else:
             raise NotImplementedError('downsample mode [{:s}] is not found'.format(downsample_mode))
 
-        self.m_down1 = nn.ModuleList([*[QGM(nc[0], nc[0], bias=True, mode='C' + act_mode + 'C') for _ in range(nb)],
+        self.m_down1 = nn.ModuleList([*[GCM(nc[0], nc[0], bias=True, mode='C' + act_mode + 'C') for _ in range(nb)],
                                       downsample_block(nc[0], nc[1], bias=True, mode='2')])
-        self.m_down2 = nn.ModuleList([*[QGM(nc[1], nc[1], bias=True, mode='C' + act_mode + 'C') for _ in range(nb)],
+        self.m_down2 = nn.ModuleList([*[GCM(nc[1], nc[1], bias=True, mode='C' + act_mode + 'C') for _ in range(nb)],
                                       downsample_block(nc[1], nc[2], bias=True, mode='2')])
-        self.m_down3 = nn.ModuleList([*[QGM(nc[2], nc[2], bias=True, mode='C' + act_mode + 'C') for _ in range(nb)]])
+        self.m_down3 = nn.ModuleList([*[GCM(nc[2], nc[2], bias=True, mode='C' + act_mode + 'C') for _ in range(nb)]])
 
-        self.affm1 = ASM(n_feat=nc[0], kernel_size=3, bias=False)
-        self.affm2 = ASM(n_feat=nc[1], kernel_size=3, bias=False)
-        self.affm3 = ASM(n_feat=nc[2], kernel_size=3, bias=False)
+        self.affm1 = LCM(n_feat=nc[0], kernel_size=3, bias=False)
+        self.affm2 = LCM(n_feat=nc[1], kernel_size=3, bias=False)
+        self.affm3 = LCM(n_feat=nc[2], kernel_size=3, bias=False)
 
         self.m_body_encoder = sequential(
             *[ResBlock(nc[2], nc[2], bias=True, mode='C' + act_mode + 'C') for _ in range(nb)])
@@ -278,13 +281,13 @@ class HQGN(nn.Module):
         else:
             raise NotImplementedError('upsample mode [{:s}] is not found'.format(upsample_mode))
 
-        self.m_up3 = nn.ModuleList([*[QGM(nc[2], nc[2], bias=True, mode='C' + act_mode + 'C') for _ in range(nb)]])
+        self.m_up3 = nn.ModuleList([*[GCM(nc[2], nc[2], bias=True, mode='C' + act_mode + 'C') for _ in range(nb)]])
 
         self.m_up2 = nn.ModuleList([upsample_block(nc[2], nc[1], bias=True, mode='2'),
-                                    *[QGM(nc[1], nc[1], bias=True, mode='C' + act_mode + 'C') for _ in range(nb)]])
+                                    *[GCM(nc[1], nc[1], bias=True, mode='C' + act_mode + 'C') for _ in range(nb)]])
 
         self.m_up1 = nn.ModuleList([upsample_block(nc[1], nc[0], bias=True, mode='2'),
-                                    *[QGM(nc[0], nc[0], bias=True, mode='C' + act_mode + 'C') for _ in range(nb)]])
+                                    *[GCM(nc[0], nc[0], bias=True, mode='C' + act_mode + 'C') for _ in range(nb)]])
 
         self.m_tail = conv(nc[0], out_nc, bias=True, mode='C')
 
