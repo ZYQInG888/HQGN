@@ -11,27 +11,9 @@ import matplotlib.pyplot as plt
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
-def visualize_features(features, save_dir, img_name):
-    # features 是包含6个三维特征张量的元组
-    for i, feature in enumerate(features):
-        feature = feature.squeeze(0).cpu().numpy()  # 转为numpy数组并移到CPU
-
-        # 对特征图进行通道求和
-        feature_sum = np.sum(feature, axis=0)
-
-        # 归一化
-        feature_sum = (feature_sum - feature_sum.min()) / (feature_sum.max() - feature_sum.min())
-        feature_sum = (feature_sum * 255).astype(np.uint8)  # 转为uint8
-        feature_map_color = cv2.applyColorMap(feature_sum, cv2.COLORMAP_JET)  # 应用伪彩色
-
-        # 保存伪彩色图像
-        save_path = os.path.join(save_dir, f'{img_name}_feature_{i+1}.png')
-        cv2.imwrite(save_path, feature_map_color)
-
-
 def main():
 
-    task = 'Color1'
+    task = 'Color'  # 'Color' or 'Gray'
     quality_factor_list = [10, 20, 30, 40]
     testset_name = 'LIVE1'  # 'LIVE1_color' 'BSDS500_color' 'ICB'
     n_channels = 3            # set 1 for grayscale image, set 3 for color image
@@ -126,8 +108,6 @@ def main():
             img_E = util.tensor2single(img_E)
             img_E = util.single2uint(img_E)
             img_H = util.imread_uint(H_paths[idx], n_channels=n_channels).squeeze()
-
-            visualize_features(features, E_path, img_name)
 
             # --------------------------------
             # PSNR and SSIM, PSNRB
