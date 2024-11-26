@@ -89,12 +89,6 @@ class ModelHQGN(ModelBase):
             self.G_lossfn = nn.MSELoss().to(self.device)
         elif G_lossfn_type == 'l2sum':
             self.G_lossfn = nn.MSELoss(reduction='sum').to(self.device)
-        elif G_lossfn_type == 'ssim':
-            self.G_lossfn = SSIMLoss().to(self.device)
-        elif G_lossfn_type == 'fft':
-            self.G_lossfn = FFTLoss().to(self.device)
-        elif G_lossfn_type == 'edge':
-            self.G_lossfn = EdgeLoss().to(self.device)
         else:
             raise NotImplementedError('Loss type [{:s}] is not found.'.format(G_lossfn_type))
 
